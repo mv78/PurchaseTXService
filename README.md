@@ -202,11 +202,11 @@ The default profile is `dev` — no configuration required. H2 console is availa
 
 ### Profiles
 
-| Profile | Database | How to activate |
-|---|---|---|
-| `dev` (default) | H2 file-based, no credentials needed | run without any profile |
-| `test` | H2 in-memory | activated automatically by the test suite |
-| `prod` | PostgreSQL, credentials required | `SPRING_PROFILES_ACTIVE=prod` |
+| Profile | Database | Cache | How to activate |
+|---|---|---|---|
+| `dev` (default) | H2 file-based | Caffeine (in-process) | run without any profile |
+| `test` | H2 in-memory | Caffeine (in-process) | activated automatically by the test suite |
+| `prod` | PostgreSQL | Redis | `SPRING_PROFILES_ACTIVE=prod` |
 
 ### Production environment variables
 
@@ -216,6 +216,10 @@ Required when running with `SPRING_PROFILES_ACTIVE=prod`:
 DB_URL=jdbc:postgresql://host:5432/dbname
 DB_USERNAME=your_user
 DB_PASSWORD=your_password
+
+REDIS_HOST=your-redis-host   # default: redis (matches docker-compose service name)
+REDIS_PORT=6379              # default: 6379
+REDIS_PASSWORD=              # default: empty
 ```
 
 See `.env.example` for a full template.
@@ -315,7 +319,7 @@ Three layers:
 - Java 21
 - Spring Boot 4 (Spring Framework 7, Jackson 3)
 - PostgreSQL 17 (prod) / H2 (dev, test) + JPA + Flyway
-- Caffeine cache
+- Redis (prod) / Caffeine (dev, test)
 - springdoc-openapi (Swagger UI)
 - Docker + Docker Compose
 - WireMock (tests)
