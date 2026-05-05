@@ -87,10 +87,10 @@ All error responses follow [RFC 9457 Problem Details](https://www.rfc-editor.org
 | `config` | Clock bean (UTC), OpenAPI metadata |
 
 **Key design decisions**
-- Three Spring profiles: `dev` (H2 file, default), `test` (H2 in-memory, test suite), `prod` (PostgreSQL via env vars).
+- Three Spring profiles: `dev` (H2 file, default), `test` (H2 in-memory, test suite), `prod` (PostgreSQL + Redis via env vars).
 - UTC timezone enforced at JVM, JDBC, and Hibernate layers.
 - Schema managed by Flyway; Hibernate runs in `validate` mode only.
-- Exchange rates cached in Caffeine for 24 hours (1 000 entries max) to avoid hammering the Treasury API.
+- Exchange rates cached for 24 hours — Caffeine (in-process) in `dev`, Redis in `prod`.
 - Correlation IDs (`X-Correlation-ID`) propagated via MDC through every request; auto-generated if absent.
 - Amount rounding is `HALF_UP` to 2 decimal places.
 
