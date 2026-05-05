@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Mike Veksler. All rights reserved.
 package com.mveksler.purchasetx.currency.service.client;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;

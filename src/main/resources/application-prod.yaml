@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  h2:
+    console:
+      enabled: false
+  jpa:
+    properties:
+      hibernate.format_sql: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cache:
+    type: redis
+    redis:
+      time-to-live: 24h
+      cache-null-values: false
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+server:
+  shutdown: graceful

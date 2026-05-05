@@ -1,0 +1,66 @@
+# Copyright (c) 2026 Mike Veksler. All rights reserved.
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: purchasetx
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: UTC        # OS timezone inside the container
+      PGTZ: UTC      # PostgreSQL session timezone default
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # $$VAR — double-dollar escapes compose interpolation so the shell
+      # inside the container resolves the variable, not the compose engine
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  app:
+    # Local development: build from source.
+    # Production: replace with  image: ghcr.io/mv78/purchasetx:<version>
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # service names resolve on the backend network
+      DB_URL: jdbc:postgresql://postgres:5432/purchasetx
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:

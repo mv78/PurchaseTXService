@@ -2,13 +2,9 @@ spring:
   application:
     name: PurchaseTx
   datasource:
-    # setup H2 connection with UTC timezone and file store for persistence
     url: jdbc:h2:file:./data/purchases;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;TIME ZONE=UTC
-    driver-class-name: org.h2.Driver
-    # Looks for DB_USERNAME env var, defaults to 'sa'
-    username: ${DB_USERNAME:sa}
-    # Looks for DB_PASSWORD env var, defaults to empty
-    password: ${DB_PASSWORD:}
+    username: sa
+    password:
   h2:
     console:
       enabled: true
@@ -17,9 +13,8 @@ spring:
     hibernate:
       ddl-auto: validate    # flyway manages schema lifecycle
     properties:
-      hibernate.dialect: org.hibernate.dialect.H2Dialect
       hibernate.format_sql: true
-      hibernate.jdbc.time_zone: UTC #tell it to use UTC timezone
+      hibernate.jdbc.time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration

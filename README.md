@@ -59,8 +59,9 @@ All error responses follow [RFC 9457 Problem Details](https://www.rfc-editor.org
                                     └────────┬──────┘   └───────┬──────────────┘
                                              │                   │
                                     ┌────────▼──────┐   ┌───────▼──────────────┐
-                                    │  H2 Database  │   │ ExchangeRateService  │
-                                    │  (JPA/Flyway) │   │  (Caffeine cache)    │
+                                    │  H2 (dev/test)│   │ ExchangeRateService  │
+                                    │  PG (prod)    │   │  (Caffeine cache)    │
+                                    │  JPA/Flyway   │   │                      │
                                     └───────────────┘   └───────┬──────────────┘
                                                                  │
                                                         ┌────────▼──────────────┐
@@ -86,7 +87,8 @@ All error responses follow [RFC 9457 Problem Details](https://www.rfc-editor.org
 | `config` | Clock bean (UTC), OpenAPI metadata |
 
 **Key design decisions**
-- H2 file-mode database with UTC timezone enforced at JVM, JDBC, and Hibernate layers.
+- Three Spring profiles: `dev` (H2 file, default), `test` (H2 in-memory, test suite), `prod` (PostgreSQL via env vars).
+- UTC timezone enforced at JVM, JDBC, and Hibernate layers.
 - Schema managed by Flyway; Hibernate runs in `validate` mode only.
 - Exchange rates cached in Caffeine for 24 hours (1 000 entries max) to avoid hammering the Treasury API.
 - Correlation IDs (`X-Correlation-ID`) propagated via MDC through every request; auto-generated if absent.
@@ -189,17 +191,108 @@ When the application is running, interactive docs are available via Swagger UI:
 
 ## Running locally
 
+Copy `.env.example` to `.env` and adjust as needed, then:
+
 ```bash
 ./mvnw spring-boot:run
 ```
 
-The H2 console is available at `http://localhost:8080/h2-console`  
-JDBC URL: `jdbc:h2:file:./data/purchases`
+The default profile is `dev` — no configuration required. H2 console is available at  
+`http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./data/purchases`).
 
-**Environment variables** (both optional, defaults to `sa` / empty password):
+### Profiles
+
+| Profile | Database | How to activate |
+|---|---|---|
+| `dev` (default) | H2 file-based, no credentials needed | run without any profile |
+| `test` | H2 in-memory | activated automatically by the test suite |
+| `prod` | PostgreSQL, credentials required | `SPRING_PROFILES_ACTIVE=prod` |
+
+### Production environment variables
+
+Required when running with `SPRING_PROFILES_ACTIVE=prod`:
+
 ```
-DB_USERNAME
-DB_PASSWORD
+DB_URL=jdbc:postgresql://host:5432/dbname
+DB_USERNAME=your_user
+DB_PASSWORD=your_password
+```
+
+See `.env.example` for a full template.
+
+---
+
+## Docker
+
+### Docker Compose (recommended for local development)
+
+Starts the application and a PostgreSQL 17 container together, networked automatically.
+
+```bash
+# 1. create your .env from the example (only needed once)
+cp .env.example .env
+# edit .env and set DB_USERNAME and DB_PASSWORD
+
+# 2. build the app image and start everything
+docker compose up
+
+# rebuild after code changes
+docker compose up --build
+
+# run in the background
+docker compose up -d
+
+# view logs
+docker compose logs -f
+
+# stop (keeps database volume)
+docker compose down
+
+# stop and wipe the database
+docker compose down -v
+```
+
+Once running:
+- **API** → `http://localhost:8080`
+- **Swagger UI** → `http://localhost:8080/swagger-ui.html`
+- **Health** → `http://localhost:8080/actuator/health`
+
+Connect to PostgreSQL directly:
+```bash
+docker compose exec postgres psql -U purchasetx_user -d purchasetx
+```
+
+### Docker image only (without Compose)
+
+Build and tag the image:
+
+```bash
+# Tags as  purchasetx:<version>  and  purchasetx:<git-sha>
+./mvnw package -Pdocker
+
+# Push to a registry
+./mvnw package -Pdocker -Ddocker.registry=ghcr.io/myorg/
+```
+
+Run against an external database:
+
+```bash
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_URL=jdbc:postgresql://host:5432/purchasetx \
+  -e DB_USERNAME=your_user \
+  -e DB_PASSWORD=your_password \
+  --memory=512m \
+  purchasetx:1.0.0
+```
+
+### CI
+
+The GitHub Actions workflow builds and pushes the image to `ghcr.io` automatically on every push to `main`:
+
+```
+ghcr.io/mv78/purchasetx:<version>
+ghcr.io/mv78/purchasetx:<git-sha>
 ```
 
 ---
@@ -221,7 +314,8 @@ Three layers:
 
 - Java 21
 - Spring Boot 4 (Spring Framework 7, Jackson 3)
-- H2 + JPA + Flyway
+- PostgreSQL 17 (prod) / H2 (dev, test) + JPA + Flyway
 - Caffeine cache
 - springdoc-openapi (Swagger UI)
+- Docker + Docker Compose
 - WireMock (tests)

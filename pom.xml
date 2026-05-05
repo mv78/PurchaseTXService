@@ -31,6 +31,9 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <docker.image.name>purchasetx</docker.image.name>
+        <!-- Override with your registry prefix: -Ddocker.registry=ghcr.io/myorg/ -->
+        <docker.registry></docker.registry>
     </properties>
     <dependencies>
         <dependency>
@@ -44,6 +47,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -63,6 +70,10 @@
             <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
@@ -77,6 +88,11 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -139,5 +155,74 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+            Docker image build — opt-in so developers without Docker are unaffected.
+            Usage:
+              mvn package -Pdocker
+              mvn package -Pdocker -Ddocker.registry=ghcr.io/myorg/
+        -->
+        <profile>
+            <id>docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.46.0</version>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <name>${docker.registry}${docker.image.name}</name>
+                                    <build>
+                                        <dockerFile>${project.basedir}/Dockerfile</dockerFile>
+                                        <!--
+                                            Two tags per build:
+                                              - project version  (e.g. 1.2.3 or 1.2.3-SNAPSHOT) — stable reference
+                                              - git commit SHA   (e.g. abc1234)                  — immutable, safe to deploy
+                                        -->
+                                        <tags>
+                                            <tag>${project.version}</tag>
+                                            <tag>${git.commit.id.abbrev}</tag>
+                                        </tags>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Exposes ${git.commit.id.abbrev} used in the image tag above -->
+                    <plugin>
+                        <groupId>io.github.git-commit-id</groupId>
+                        <artifactId>git-commit-id-maven-plugin</artifactId>
+                        <version>9.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>git-info</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>revision</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <abbrevLength>7</abbrevLength>
+                            <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

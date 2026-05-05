@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Mike Veksler. All rights reserved.
 package com.mveksler.purchasetx.purchase.domain;
 
 import org.junit.jupiter.api.Test;
