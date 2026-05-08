@@ -10,12 +10,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ProblemDetail;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.YearMonth;
 import java.util.UUID;
 
 @RestController
@@ -67,5 +69,20 @@ public class PurchaseController {
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public PurchaseResponse findPurchaseById(@PathVariable UUID id) {
         return PurchaseResponse.from(service.findById(id));
+    }
+
+    @Operation(
+            summary = "Get total purchase amount for a given month",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Sum returned (0.00 when no purchases exist for the month)"),
+                    @ApiResponse(responseCode = "400", description = "month parameter is missing or not in yyyy-MM format",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProblemDetail.class)))
+            }
+    )
+    @GetMapping(value = "/sum", produces = MediaType.APPLICATION_JSON_VALUE)
+    public PurchaseSumResponse sumByMonth(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month
+    ) {
+        return PurchaseSumResponse.from(service.sumByMonth(month));
     }
 }

@@ -10,8 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.UUID;
 
 @Service
@@ -45,5 +48,10 @@ public class PurchaseService {
         log.info("Fetching purchase id={}", id);
         return repository.findById(id)
                 .orElseThrow(() -> new PurchaseNotFoundException(id));
+    }
+
+    public BigDecimal sumByMonth(YearMonth month) {
+        BigDecimal result = repository.sumByYearAndMonth(month.getYear(), month.getMonthValue());
+        return result != null ? result : BigDecimal.ZERO;
     }
 }
